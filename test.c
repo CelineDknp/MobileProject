@@ -9,8 +9,8 @@ AUTOSTART_PROCESSES(&timer_process);
  
 PROCESS_THREAD(timer_process, ev, data)
 {   
-  PROCESS_EXITHANDLER(goto exit);
-  PROCESS_BEGIN();
+   PROCESS_EXITHANDLER(goto exit);
+   PROCESS_BEGIN();
  
   /* Initialize stuff here. */ 
  
@@ -30,6 +30,6 @@ PROCESS_THREAD(timer_process, ev, data)
 			printf("Timer has expired !");
 		}
 	}	
-	exit:
-		PROCESS_END();
+	
+	PROCESS_END();
 }
