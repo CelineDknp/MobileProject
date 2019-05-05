@@ -9,7 +9,7 @@ AUTOSTART_PROCESSES(&timer_process);
  
 PROCESS_THREAD(timer_process, ev, data)
 {   
-   PROCESS_EXITHANDLER(goto exit);
+   PROCESS_EXITHANDLER();
    PROCESS_BEGIN();
  
   /* Initialize stuff here. */ 
