@@ -31,7 +31,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
   test_packet p;
   memcpy(&p, packetbuf_dataptr(), sizeof(test_packet));
-  printf("broadcast message of type %d received from %d.%d at rank %d\n",  p.rank,
+  printf("broadcast message of type %d received from %d.%d at rank %d\n",  p.message_type,
          from->u8[0], from->u8[1], p.rank);
   printf("Ignored, I am root\n");
 }
