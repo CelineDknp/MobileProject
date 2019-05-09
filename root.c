@@ -73,15 +73,15 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
 	routing_packet p;
 	memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet));
-	printf("broadcast message of type %d received from %d.%d at rank %d\n",  p.message_type,
-         from->u8[0], from->u8[1], p.rank);
+	//printf("broadcast message of type %d received from %d.%d at rank %d\n",  p.message_type,
+        // from->u8[0], from->u8[1], p.rank);
 	printf("Ignored, I am root\n");
 }
 static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr)
 {
 	data_packet p;
 	memcpy(&p, packetbuf_dataptr(), sizeof(data_packet));
-	printf("unicast message of type %d received from %d.%d saying %s\n",  p.message_type,
+	printf("unicast message of type %d received from %d.%d saying %s wtf\n",  p.message_type,
          from->u8[0], from->u8[1], p.message);
 	printf("I am root, I need to give it to the gateway !\n");
 }

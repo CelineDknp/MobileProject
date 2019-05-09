@@ -25,17 +25,21 @@ typedef struct data_packet{
 } data_packet;
  
 //-----------------------------------------------------------------   
-PROCESS(timer_process, "timer with print example");
-AUTOSTART_PROCESSES(&timer_process);
+PROCESS(node_routing_check_process, "Routing process for node of the network");
+PROCESS(node_routing_send_process, "Routing process for node of the network");
+PROCESS(node_data_process, "Data sending process for node of the network");
+AUTOSTART_PROCESSES(&node_routing_check_process, &node_routing_check_process, &node_data_process);
 //-----------------------------------------------------------------
 //Variables
 uint8_t rank = 0;
 uint8_t parent_id[2];
 rimeaddr_t parent_addr;
+static struct etimer parent_timer;
 
 //Functions
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from);
 static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr);
+static void send_routing_infos();
 
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;
@@ -43,44 +47,93 @@ static const struct runicast_callbacks runicast_call = {runicast_recv};
 static struct runicast_conn runicast;
 
 //Processes
-PROCESS_THREAD(timer_process, ev, data)
-{   
+PROCESS_THREAD(node_routing_check_process, ev, data)
+{
 	static struct etimer et;
-
   	PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   	PROCESS_BEGIN();
 
   	broadcast_open(&broadcast, 129, &broadcast_call);
+	
+	
+	/* Delay 6 secondes */
+    	etimer_set(&parent_timer, CLOCK_SECOND * 15);
+
+  	while(1) {
+
+		etimer_set(&et, CLOCK_SECOND);
+    		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    		
+    		if(etimer_expired(&parent_timer) != 0 && rank != 0){ //If timer has expired
+			etimer_reset(&parent_timer);
+			rank = 0;
+			printf("I lost my parent !\n");
+		}	
+  	}
+  	PROCESS_END();	
+}
+
+PROCESS_THREAD(node_routing_send_process, ev, data)
+{
+	static struct etimer et;
+  	PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
+  	PROCESS_BEGIN();
+	
+  	broadcast_open(&broadcast, 129, &broadcast_call);
+	
+	
+	/* Delay 3 secondes */
+    	etimer_set(&et, CLOCK_SECOND * 3);
+
+  	while(1) {
+
+
+    		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    	
+    		if(rank != 0){ //If we have a parent
+			send_routing_infos();
+		}	
+  	}
+  	PROCESS_END();	
+}
+
+PROCESS_THREAD(node_data_process, ev, data)
+{   
+	static struct etimer et;
+
+  	PROCESS_EXITHANDLER(runicast_close(&runicast);)
+  	PROCESS_BEGIN();
   	runicast_open(&runicast, 144, &runicast_call);
 
   	while(1) {
 
-    	/* Delay 2-4 seconds */
-    	etimer_set(&et, CLOCK_SECOND * 4 + random_rand() % (CLOCK_SECOND * 4));
+    		/* Delay 2-4 seconds */
+    		etimer_set(&et, CLOCK_SECOND * 4 + random_rand() % (CLOCK_SECOND * 4));
 
-    	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+ 	   	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     	
-    	uint8_t type = 1;
-    	if(rank != 0){ //If rank != 0, has a parent
-    		routing_packet p = {type, rank};
-
-    		packetbuf_copyfrom(&p, sizeof(routing_packet));
-    		broadcast_send(&broadcast);
-    		printf("broadcast message sent\n"); //Send routing infos
-	
-			type = 2;
+ 	   	uint8_t type = 2;
+ 	   	if(rank != 0){ //If rank != 0, has a parent and can send data
 			char* message = "Hey ! I sensed X";
 			data_packet d = {type, message};
-
-    		packetbuf_copyfrom(&d, sizeof(data_packet));
-    		runicast_send(&runicast, &parent_addr, 0);
-    		printf("unicast message sent\n"); //Send data
-    	}
+	
+ 	   		packetbuf_copyfrom(&d, sizeof(data_packet));
+ 	   		runicast_send(&runicast, &parent_addr, 0);
+ 	   		printf("unicast message sent\n"); //Send data
+ 	   	}
   	}
   	PROCESS_END();	
 }
 
 // Functions
+static void send_routing_infos(){
+	uint8_t type = 1;
+    	routing_packet p = {type, rank};
+
+    	packetbuf_copyfrom(&p, sizeof(routing_packet));
+    	broadcast_send(&broadcast);
+    	printf("broadcast routing message sent\n"); //Send routing infos
+}
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
 	routing_packet p;
@@ -88,6 +141,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 	printf("broadcast message of type %d received from %d.%d at rank %d\n",  p.message_type,
          from->u8[0], from->u8[1], p.rank);
 	printf("my rank is %d\n", rank);
+    	etimer_restart(&parent_timer);
 	if(rank == 0 || p.rank+1 < rank){ //if my rank is 0, I need a parent
 		rank = p.rank+1;
 		parent_id[0] = from->u8[0];
@@ -95,6 +149,9 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 		memcpy(&parent_addr, from, sizeof(rimeaddr_t));
 		printf("I found a new parent !\n");
   		printf("my rank is now %d\n", rank);
+		
+		//Found a new parent, broadcast it !
+		send_routing_infos();
   	}
 }
 static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr)
