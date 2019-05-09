@@ -18,6 +18,11 @@ typedef struct test_packet{
 	uint8_t message_type;
 	uint8_t rank;
 } test_packet;
+
+typedef struct data_packet{
+	uint8_t message_type;
+	char* message;
+} data_packet;
  
 //-----------------------------------------------------------------   
 PROCESS(timer_process, "timer with print example");
@@ -35,8 +40,18 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
          from->u8[0], from->u8[1], p.rank);
   printf("Ignored, I am root\n");
 }
+static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr)
+{
+  data_packet p;
+  memcpy(&p, packetbuf_dataptr(), sizeof(data_packet));
+  printf("unicast message of type %d received from %d.%d saying %s\n",  p.message_type,
+         from->u8[0], from->u8[1], p.message);
+  printf("I am root, I need to give it to the gateway !\n");
+}
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;
+static const struct runicast_callbacks runicast_call = {runicast_recv};
+static struct runicast_conn runicast;
  
 PROCESS_THREAD(timer_process, ev, data)
 {   
@@ -47,6 +62,7 @@ PROCESS_THREAD(timer_process, ev, data)
   PROCESS_BEGIN();
 
   broadcast_open(&broadcast, 129, &broadcast_call);
+  runicast_open(&runicast, 144, &runicast_call);
 
   while(1) {
 
