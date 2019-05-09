@@ -38,8 +38,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 	rank = p.rank+1;
 	parent_id[0] = from->u8[0];
 	parent_id[1] = from->u8[1];
-	printf("I found a new parent !\n");
-  	printf("my rank is now %d\n", rank);
+	printf("I found a new parent !");
   }
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
@@ -61,13 +60,13 @@ PROCESS_THREAD(timer_process, ev, data)
     etimer_set(&et, CLOCK_SECOND * 4 + random_rand() % (CLOCK_SECOND * 4));
 
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    //char* message = "Hey";
+    uint8_t type = 1;
     
-    //test_packet p = {rank, message};
+    test_packet p = {type, rank};
 
-    //packetbuf_copyfrom(&p, sizeof(test_packet));
-    //broadcast_send(&broadcast);
-    //printf("broadcast message sent\n");
+    packetbuf_copyfrom(&p, sizeof(test_packet));
+    broadcast_send(&broadcast);
+    printf("broadcast message sent\n");
   }
 
   PROCESS_END();	
