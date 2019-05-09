@@ -25,10 +25,10 @@ typedef struct data_packet{
 } data_packet;
  
 //-----------------------------------------------------------------   
-PROCESS(node_routing_check_process, "Routing process for node of the network");
-PROCESS(node_routing_send_process, "Routing process for node of the network");
+PROCESS(node_routing_check_process, "Routing check process for node of the network");
+PROCESS(node_routing_send_process, "Routing send process for node of the network");
 PROCESS(node_data_process, "Data sending process for node of the network");
-AUTOSTART_PROCESSES(&node_routing_check_process, &node_routing_check_process, &node_data_process);
+AUTOSTART_PROCESSES(&node_routing_send_process, &node_routing_check_process, &node_data_process);
 //-----------------------------------------------------------------
 //Variables
 uint8_t rank = 0;
@@ -50,10 +50,7 @@ static struct runicast_conn runicast;
 PROCESS_THREAD(node_routing_check_process, ev, data)
 {
 	static struct etimer et;
-  	PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   	PROCESS_BEGIN();
-
-  	broadcast_open(&broadcast, 129, &broadcast_call);
 	
 	
 	/* Delay 6 secondes */
@@ -75,24 +72,23 @@ PROCESS_THREAD(node_routing_check_process, ev, data)
 
 PROCESS_THREAD(node_routing_send_process, ev, data)
 {
-	static struct etimer et;
+	static struct etimer broad_delay;
   	PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   	PROCESS_BEGIN();
 	
   	broadcast_open(&broadcast, 129, &broadcast_call);
 	
-	
 	/* Delay 3 secondes */
-    	etimer_set(&et, CLOCK_SECOND * 3);
+    	etimer_set(&broad_delay, CLOCK_SECOND * 3);
 
   	while(1) {
 
-
-    		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&broad_delay));
     	
     		if(rank != 0){ //If we have a parent
 			send_routing_infos();
-		}	
+		}
+		etimer_reset(&broad_delay);
   	}
   	PROCESS_END();	
 }
