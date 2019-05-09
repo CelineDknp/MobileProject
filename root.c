@@ -33,13 +33,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
   memcpy(&p, packetbuf_dataptr(), sizeof(test_packet));
   printf("broadcast message of type %d received from %d.%d at rank %d\n",  p.rank,
          from->u8[0], from->u8[1], p.rank);
-  printf("my rank is %d\n", rank);
-  if(rank == 0 || p.rank+1 < rank){ //if my rank is 0, I need a parent
-	rank = p.rank+1;
-	parent_id[0] = from->u8[0];
-	parent_id[1] = from->u8[1];
-	printf("I found a new parent !");
-  }
+  printf("Ignored, I am root\n");
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;

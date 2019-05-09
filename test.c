@@ -61,13 +61,18 @@ PROCESS_THREAD(timer_process, ev, data)
     etimer_set(&et, CLOCK_SECOND * 4 + random_rand() % (CLOCK_SECOND * 4));
 
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    //char* message = "Hey";
-    
-    //test_packet p = {rank, message};
+    /* Delay 2-4 seconds */
+    etimer_set(&et, CLOCK_SECOND * 4 + random_rand() % (CLOCK_SECOND * 4));
 
-    //packetbuf_copyfrom(&p, sizeof(test_packet));
-    //broadcast_send(&broadcast);
-    //printf("broadcast message sent\n");
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    uint8_t type = 1;
+    if(rank != 0){
+    test_packet p = {type, rank};
+
+    packetbuf_copyfrom(&p, sizeof(test_packet));
+    broadcast_send(&broadcast);
+    printf("broadcast message sent\n");
+    }
   }
 
   PROCESS_END();	
