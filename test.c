@@ -39,6 +39,8 @@ typedef struct routing_packet{
 typedef struct data_packet{
 	uint8_t message_type;
 	uint8_t data_type;
+	uint8_t id1_sender;
+	uint8_t id2_sender;
 	uint16_t sensor_data;
 } data_packet;
  
@@ -52,6 +54,7 @@ AUTOSTART_PROCESSES(&node_routing_send_process, &node_routing_check_process, &no
 uint8_t rank = 0;
 uint8_t parent_id[2];
 rimeaddr_t parent_addr;
+uint8_t *my_id;
 uint8_t sending_mode = PERIOD; //Start of with sending mode periodically
 static struct etimer parent_timer;
 
@@ -95,6 +98,9 @@ PROCESS_THREAD(node_routing_send_process, ev, data)
 	
   	broadcast_open(&broadcast, 129, &broadcast_call);
     	etimer_set(&broad_delay, CLOCK_SECOND * SEND_ROUTING); //Timer for sending routing infos
+	
+	my_id = rimeaddr_node_addr.u8; //Get my address
+	printf("My address is : %d.%d\n", my_id[0], my_id[1]);
 
   	while(1) {
     		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&broad_delay));
@@ -150,7 +156,7 @@ static void create_data_packet(){
 	uint8_t type_data = (rand() % (2 - 1 + 1)) + 1; //Randomly pick a data type
 	uint16_t value = rand(); //Randomy create a value
 
-	data_packet p = {type_packet, type_data, value};
+	data_packet p = {type_packet, type_data, my_id[0], my_id[1], value};
 	packetbuf_copyfrom(&p, sizeof(data_packet));
 	runicast_send(&runicast, &parent_addr, 0);
 	printf("unicast message send\n"); 
@@ -186,7 +192,7 @@ static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8
 	data_packet p;
 	memcpy(&p, packetbuf_dataptr(), sizeof(data_packet));
 	printf("unicast message of type %d received from %d.%d saying %d\n",  p.message_type,
-         from->u8[0], from->u8[1], p.sensor_data);
+         p.id1_sender, p.id2_sender, p.sensor_data);
 	if(rank != 0){ //If I have a parent
 		packetbuf_copyfrom(&p, sizeof(data_packet)); //Need to pass message along
 		runicast_send(&runicast, &parent_addr, 0);

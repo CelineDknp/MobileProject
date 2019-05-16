@@ -21,10 +21,12 @@ typedef struct routing_packet{
 
 typedef struct data_packet{
 	uint8_t message_type;
-	uint8_t data_type; //Multiple data types
-	uint16_t sensor_data; //Actual sensed data
+	uint8_t data_type;
+	uint8_t id1_sender;
+	uint8_t id2_sender;
+	uint16_t sensor_data;
 } data_packet;
- 
+
 //-----------------------------------------------------------------   
 PROCESS(timer_process, "timer with print example");
 AUTOSTART_PROCESSES(&timer_process);
@@ -82,7 +84,7 @@ static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8
 {
 	data_packet p;
 	memcpy(&p, packetbuf_dataptr(), sizeof(data_packet));
-	printf("unicast message of type %d received from %d.%d saying %d\n",  p.data_type,
-         from->u8[0], from->u8[1], p.sensor_data);
+	printf("unicast message of type %d received from %d.%d saying %d\n",  p.message_type,
+         p.id1_sender, p.id2_sender, p.sensor_data);
 	printf("I am root, I need to give it to the gateway !\n");
 }
