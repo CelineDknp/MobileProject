@@ -14,6 +14,9 @@
 #include "dev/light-ziglet.h"
 #include "random.h"
 
+
+#define NBR_SUBJECTS 2
+
 enum PACKET_TYPE {
 	ROUTING = 1, //Routing messages to create the tree
 	DATA = 2, //Data messages that go towards the root
@@ -23,6 +26,11 @@ enum PACKET_TYPE {
 enum SENDING_MODE { //Mode of sending the data
 	PERIOD = 1, //Send every X seconds
 	CHANGE = 2 //Send only when there is a change
+};
+
+enum SUBJECTS {
+	TEMP = 1,
+	HUMIDITY = 2
 };
 
 enum TIMINGS {
@@ -55,7 +63,10 @@ uint8_t rank = 0;
 uint8_t parent_id[2];
 rimeaddr_t parent_addr;
 uint8_t *my_id;
+//Sending configuration
 uint8_t sending_mode = PERIOD; //Start of with sending mode periodically
+int send_permissions[NBR_SUBJECTS] = {1, 1}; //Strat by allowing to send all data type
+
 static struct etimer parent_timer;
 
 //Functions
@@ -153,13 +164,18 @@ static void send_routing_infos(){
 
 static void create_data_packet(){
 	uint8_t type_packet = DATA;
-	uint8_t type_data = (rand() % (2 - 1 + 1)) + 1; //Randomly pick a data type
+	uint8_t type_data = (rand() % NBR_SUBJECTS) + 2; //Randomly pick a data type
 	uint16_t value = rand(); //Randomy create a value
+	printf("Decided on subject %d\n", type_data);
 
 	data_packet p = {type_packet, type_data, my_id[0], my_id[1], value};
 	packetbuf_copyfrom(&p, sizeof(data_packet));
-	runicast_send(&runicast, &parent_addr, 0);
-	printf("unicast message send\n"); 
+	if(send_permissions[type_data-1] == 1){ //Send only if allowed
+		runicast_send(&runicast, &parent_addr, 0);
+		printf("unicast message send\n");
+	}else{
+		printf("didn't send unicast message, subject was muted\n");
+	}
 }
 
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)

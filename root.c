@@ -84,7 +84,6 @@ static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8
 {
 	data_packet p;
 	memcpy(&p, packetbuf_dataptr(), sizeof(data_packet));
-	printf("unicast message of type %d received from %d.%d saying %d\n",  p.message_type,
-         p.id1_sender, p.id2_sender, p.sensor_data);
+	printf("unicast message of type %d about subject %d received from %d.%d saying %d\n",  p.message_type, 		p.data_type, p.id1_sender, p.id2_sender, p.sensor_data);
 	printf("I am root, I need to give it to the gateway !\n");
 }
