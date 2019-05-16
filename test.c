@@ -17,7 +17,7 @@
 enum PACKET_TYPE {
 	ROUTING = 1,
 	DATA = 2
-}
+};
 
 typedef struct routing_packet{
 	uint8_t message_type;
@@ -26,8 +26,8 @@ typedef struct routing_packet{
 
 typedef struct data_packet{
 	uint8_t message_type;
-	uint8_t data_type; //Multiple data types
-	uint16_t sensor_data; //Actual sensed data
+	uint8_t data_type;
+	uint16_t sensor_data;
 } data_packet;
  
 //-----------------------------------------------------------------   
@@ -137,7 +137,7 @@ static void create_data_packet(){
 	uint8_t type_data = (rand() % (2 - 1 + 1)) + 1; //Randomly pick a data type
 	uint16_t value = rand(); //Randomy create a value
 
-	data_packet p = {type_packet, type_data, value}
+	data_packet p = {type_packet, type_data, value};
 	packetbuf_copyfrom(&p, sizeof(data_packet));
 	runicast_send(&runicast, &parent_addr, 0);
 	printf("unicast message send\n"); 
@@ -167,8 +167,8 @@ static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8
 {
 	data_packet p;
 	memcpy(&p, packetbuf_dataptr(), sizeof(data_packet));
-	printf("unicast message of type %d received from %d.%d saying %s\n",  p.message_type,
-         from->u8[0], from->u8[1], p.message);
+	printf("unicast message of type %d received from %d.%d saying %d\n",  p.message_type,
+         from->u8[0], from->u8[1], p.sensor_data);
 	packetbuf_copyfrom(&p, sizeof(data_packet));
 	runicast_send(&runicast, &parent_addr, 0);
 	printf("unicast message passed along\n");
