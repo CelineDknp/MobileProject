@@ -10,8 +10,8 @@ enum PACKET_TYPE {
 
 enum CMD_TYPE {
 	SENDING = 1, 	/* Change sending mode */
-	MUTE = 2,		/* Mute subject */
-	UNMUTE = 3		/* Unmute subject */
+	MUTE_SUBJECT = 2,		/* Mute subject */
+	UNMUTE_SUBJECT = 3		/* Unmute subject */
 };
 
 enum SENDING_MODE {
