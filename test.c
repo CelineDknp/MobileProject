@@ -3,15 +3,8 @@
 #include <stdio.h> /* For printf() */
 #include <string.h>
 #include "contiki.h"
-#include "dev/light-ziglet.h"
-#include "net/mac/mac.h"
 #include "net/netstack.h"
 #include "net/rime.h"
-#include "net/rime/announcement.h"
-#include "net/rime/broadcast-announcement.h"
-#include "net/rime/chameleon.h"
-#include "net/rime/rimeaddr.h"
-#include "net/rime/route.h"
 #include "random.h"
 
 #include "packet.h"
@@ -79,16 +72,16 @@ PROCESS_THREAD(node_routing_send_process, ev, data)
   	PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   	PROCESS_BEGIN();
 	
-  	broadcast_open(&broadcast, 129, &broadcast_call);
-    etimer_set(&broad_delay, CLOCK_SECOND * SEND_ROUTING); /* Timer for sending routing infos */
+  	broadcast_open(&broadcast, BROADCAST_CHANNEL, &broadcast_call);
+    	etimer_set(&broad_delay, CLOCK_SECOND * SEND_ROUTING); /* Timer for sending routing infos */
 	
 	my_id = rimeaddr_node_addr.u8; /* Get the node address */
 
   	while(1) {
-    	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&broad_delay));
+    		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&broad_delay));
     	
-        if (rank != 0) { 
-            /* The node has a parent */
+        	if (rank != 0) { 
+            		/* The node has a parent */
 			send_routing_infos();
 		}
 		etimer_reset(&broad_delay);
@@ -104,7 +97,7 @@ PROCESS_THREAD(node_data_process, ev, data)
   	PROCESS_EXITHANDLER(runicast_close(&runicast);)
   	PROCESS_BEGIN();
 
-  	runicast_open(&runicast, 144, &runicast_call);
+  	runicast_open(&runicast, RUNICAST_CHANNEL, &runicast_call);
 	etimer_set(&et, CLOCK_SECOND * SEND_DATA);
 
   	while(1) {

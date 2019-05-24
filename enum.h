@@ -1,6 +1,9 @@
 #ifndef ENUM_H
 #define ENUM_H
+
 #define NBR_SUBJECTS 2
+#define BROADCAST_CHANNEL 129
+#define RUNICAST_CHANNEL 144
 
 enum PACKET_TYPE {
 	ROUTING = 1,    /* Routing messages to create the tree */
@@ -9,9 +12,9 @@ enum PACKET_TYPE {
 };
 
 enum CMD_TYPE {
-	SENDING = 1, 	/* Change sending mode */
-	MUTE_SUBJECT = 2,		/* Mute subject */
-	UNMUTE_SUBJECT = 3		/* Unmute subject */
+	SENDING = 1, 		/* Change sending mode */
+	MUTE_SUBJECT = 2,	/* Mute subject */
+	UNMUTE_SUBJECT = 3	/* Unmute subject */
 };
 
 enum SENDING_MODE {

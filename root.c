@@ -3,23 +3,16 @@
 #include <stdio.h> /* For printf() */
 #include <string.h>
 #include "contiki.h"
-#include "dev/light-ziglet.h"
-#include "net/mac/mac.h"
 #include "net/netstack.h"
 #include "net/rime.h"
-#include "net/rime/announcement.h"
-#include "net/rime/broadcast-announcement.h"
-#include "net/rime/chameleon.h"
-#include "net/rime/rimeaddr.h"
-#include "net/rime/route.h"
 #include "random.h"
 
 #include "packet.h"
 #include "enum.h"
 
 /*---------------------------------------------------------------------------*/   
-PROCESS(timer_process, "timer with print example");
-AUTOSTART_PROCESSES(&timer_process);
+PROCESS(broadcast_process, "Process to send routing infos");
+AUTOSTART_PROCESSES(&broadcast_process);
 /*---------------------------------------------------------------------------*/
 
 /* Variables */
@@ -35,7 +28,7 @@ static struct broadcast_conn broadcast;
 static const struct runicast_callbacks runicast_call = {runicast_recv};
 static struct runicast_conn runicast;
  
-PROCESS_THREAD(timer_process, ev, data)
+PROCESS_THREAD(broadcast_process, ev, data)
 {   
 	static struct etimer et;
 
@@ -43,8 +36,8 @@ PROCESS_THREAD(timer_process, ev, data)
 
 	PROCESS_BEGIN();
 
-	broadcast_open(&broadcast, 129, &broadcast_call);
-	runicast_open(&runicast, 144, &runicast_call);
+	broadcast_open(&broadcast, BROADCAST_CHANNEL, &broadcast_call);
+	runicast_open(&runicast, RUNICAST_CHANNEL, &runicast_call);
 
 	while(1) {
 		/* Delay 2-4 seconds */
