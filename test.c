@@ -30,6 +30,7 @@ int send_permissions[NBR_SUBJECTS] = {1, 1}; /* Start by allowing to send all da
 
 /* Functions declarations */
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from);
+static void process_routing(struct broadcast_conn *c, const rimeaddr_t *from);
 static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr);
 static void send_routing_infos();
 static void create_data_packet();
@@ -153,7 +154,7 @@ static void create_data_packet()
 	}
 }
 
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
+static void process_routing(struct broadcast_conn *c, const rimeaddr_t *from)
 {
 	routing_packet_t p;
 	memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet_t));
@@ -166,9 +167,9 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 	printf("My rank is %d\n", rank);
     	
 	if (rank == 0 || p.rank + 1 < rank) { 
-        /* A parent has to be found */
+        	/* A parent has to be found */
 		/* Update rank and save parent ID */
-        rank = p.rank + 1;
+        	rank = p.rank + 1;
 		parent_id[0] = from->u8[0];
 		parent_id[1] = from->u8[1];
 		memcpy(&parent_addr, from, sizeof(rimeaddr_t));
@@ -176,7 +177,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 		printf("I found a new parent!\n");
   		printf("My rank is now %d\n", rank);
 		
-        /* Broadcast information about the new parent and reset the timer */
+        	/* Broadcast information about the new parent and reset the timer */
 		send_routing_infos();
 		etimer_restart(&parent_timer);
 
@@ -184,6 +185,42 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
         /* This is the node's parent */
 		etimer_restart(&parent_timer);
 	}
+}
+
+static void process_cmd(struct broadcast_conn *c, const rimeaddr_t *from)
+{
+	command_packet_t p;
+	memcpy(&p, packetbuf_dataptr(), sizeof(command_packet_t));
+	
+	printf("Broadcast command message received from %d.%d type : %d, value : %d\n",  
+        p.message_type,
+        p.command_type, 
+        p.command_value);
+	
+	switch(p.command_type){
+		case SENDING:
+			sending_mode = p.command_value;
+		case MUTE_SUBJECT:
+			send_permissions[p.command_value-1] = 0;
+		case UNMUTE_SUBJECT:
+			send_permissions[p.command_value-1] = 1;
+	}
+}
+
+static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
+{
+	uint8_t type;
+	memcpy(&type, packetbuf_dataptr(), sizeof(uint8_t));
+
+	switch(type){
+		case ROUTING:
+			process_routing(c, from);
+			break;
+		case CMD:
+			process_cmd(c, from);
+			break;
+	}	
+	
 }
 
 static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr)
