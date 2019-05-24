@@ -14,14 +14,9 @@
 #include "dev/light-ziglet.h"
 #include "random.h"
 
+#include "packet.h"
 
 #define NBR_SUBJECTS 2
-
-enum PACKET_TYPE {
-	ROUTING = 1, //Routing messages to create the tree
-	DATA = 2, //Data messages that go towards the root
-	CMD = 3 //Command messages from the gateway
-};
 
 enum SENDING_MODE { //Mode of sending the data
 	PERIOD = 1, //Send every X seconds
@@ -38,19 +33,6 @@ enum TIMINGS {
 	SEND_ROUTING = 5, //Time frame to send keep alive messages
 	SEND_DATA = 10, //Time frame to send data periodically
 };
-
-typedef struct routing_packet{
-	uint8_t message_type;
-	uint8_t rank;
-} routing_packet;
-
-typedef struct data_packet{
-	uint8_t message_type;
-	uint8_t data_type;
-	uint8_t id1_sender;
-	uint8_t id2_sender;
-	uint16_t sensor_data;
-} data_packet;
  
 //-----------------------------------------------------------------   
 PROCESS(node_routing_check_process, "Routing check process for node of the network");
@@ -155,9 +137,9 @@ PROCESS_THREAD(node_data_process, ev, data)
 // Functions
 static void send_routing_infos(){
 	uint8_t type = ROUTING;
-    	routing_packet p = {type, rank}; //Create routing packet
+    	routing_packet_t p = {type, rank}; //Create routing packet
 
-    	packetbuf_copyfrom(&p, sizeof(routing_packet));
+    	packetbuf_copyfrom(&p, sizeof(routing_packet_t));
     	broadcast_send(&broadcast);
     	printf("broadcast routing message sent\n"); //Send routing infos
 }
@@ -168,8 +150,8 @@ static void create_data_packet(){
 	uint16_t value = rand(); //Randomy create a value
 	printf("Decided on subject %d\n", type_data);
 
-	data_packet p = {type_packet, type_data, my_id[0], my_id[1], value};
-	packetbuf_copyfrom(&p, sizeof(data_packet));
+	data_packet_t p = {type_packet, type_data, my_id[0], my_id[1], value};
+	packetbuf_copyfrom(&p, sizeof(data_packet_t));
 	if(send_permissions[type_data-1] == 1){ //Send only if allowed
 		runicast_send(&runicast, &parent_addr, 0);
 		printf("unicast message send\n");
@@ -180,8 +162,8 @@ static void create_data_packet(){
 
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
-	routing_packet p;
-	memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet));
+	routing_packet_t p;
+	memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet_t));
 	
 	printf("broadcast message of type %d received from %d.%d at rank %d\n",  p.message_type,
          from->u8[0], from->u8[1], p.rank);
@@ -205,12 +187,12 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 }
 static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr)
 {
-	data_packet p;
-	memcpy(&p, packetbuf_dataptr(), sizeof(data_packet));
+	data_packet_t p;
+	memcpy(&p, packetbuf_dataptr(), sizeof(data_packet_t));
 	printf("unicast message of type %d received from %d.%d saying %d\n",  p.message_type,
          p.id1_sender, p.id2_sender, p.sensor_data);
 	if(rank != 0){ //If I have a parent
-		packetbuf_copyfrom(&p, sizeof(data_packet)); //Need to pass message along
+		packetbuf_copyfrom(&p, sizeof(data_packet_t)); //Need to pass message along
 		runicast_send(&runicast, &parent_addr, 0);
 		printf("unicast message passed along\n");
 	}else{

@@ -14,18 +14,7 @@
 #include "dev/light-ziglet.h"
 #include "random.h"
 
-typedef struct routing_packet{
-	uint8_t message_type;
-	uint8_t rank;
-} routing_packet;
-
-typedef struct data_packet{
-	uint8_t message_type;
-	uint8_t data_type;
-	uint8_t id1_sender;
-	uint8_t id2_sender;
-	uint16_t sensor_data;
-} data_packet;
+#include "packet.h"
 
 //-----------------------------------------------------------------   
 PROCESS(timer_process, "timer with print example");
@@ -61,9 +50,9 @@ PROCESS_THREAD(timer_process, ev, data)
     	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     	
     	uint8_t type = 1;
-    	routing_packet p = {type, rank};
+    	routing_packet_t p = {type, rank};
 
-    	packetbuf_copyfrom(&p, sizeof(routing_packet));
+    	packetbuf_copyfrom(&p, sizeof(routing_packet_t));
     	broadcast_send(&broadcast);
     	printf("broadcast message sent\n");
   	}
@@ -74,16 +63,16 @@ PROCESS_THREAD(timer_process, ev, data)
 //Function bodies
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
-	routing_packet p;
-	memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet));
+	routing_packet_t p;
+	memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet_t));
 	printf("broadcast message of type %d received from %d.%d at rank %d\n",  p.message_type,
          from->u8[0], from->u8[1], p.rank);
 	printf("Ignored, I am root\n");
 }
 static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr)
 {
-	data_packet p;
-	memcpy(&p, packetbuf_dataptr(), sizeof(data_packet));
+	data_packet_t p;
+	memcpy(&p, packetbuf_dataptr(), sizeof(data_packet_t));
 	printf("unicast message of type %d about subject %d received from %d.%d saying %d\n",  p.message_type, 		p.data_type, p.id1_sender, p.id2_sender, p.sensor_data);
 	printf("I am root, I need to give it to the gateway !\n");
 }
