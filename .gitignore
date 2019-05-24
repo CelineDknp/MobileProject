@@ -50,3 +50,10 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Z1 Mote files
+*.z1
+
+# Others
+symbols.h
+symbols.c
