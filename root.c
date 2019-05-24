@@ -15,6 +15,7 @@
 #include "random.h"
 
 #include "packet.h"
+#include "enum.h"
 
 /*---------------------------------------------------------------------------*/   
 PROCESS(timer_process, "timer with print example");
@@ -27,6 +28,7 @@ uint8_t rank = 0; /* Root's rank is always 0 and it has no parent */
 /* Functions declarations */
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from);
 static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr);
+static void send_cmd(uint8_t type_cmd, uint8_t value);
 
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;
@@ -84,4 +86,14 @@ static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8
 		p.id2_sender, 
 		p.sensor_data);
 	printf("I am root, I need to give it to the gateway!\n");
+}
+
+static void send_cmd(uint8_t type_cmd, uint8_t value)
+{
+	uint8_t type = CMD;
+    routing_packet_t p = {type, type_cmd, value}; /* Create routing packet */
+
+    packetbuf_copyfrom(&p, sizeof(command_packet_t));
+    broadcast_send(&broadcast);
+    printf("Broadcast command message sent\n"); /* Send routing infos */
 }

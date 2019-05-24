@@ -15,24 +15,7 @@
 #include "random.h"
 
 #include "packet.h"
-
-#define NBR_SUBJECTS 2
-
-enum SENDING_MODE {
-	PERIOD = 1,	    /* Send every X seconds */
-	CHANGE = 2 	    /* Send only when there is a change */
-};
-
-enum SUBJECTS {
-	TEMP = 1,
-	HUMIDITY = 2
-};
-
-enum TIMINGS {
-	PARENT = 15,        /* Time after which parent is considered disconnected */
-	SEND_ROUTING = 5,   /* Time frame to send keep alive messages */
-	SEND_DATA = 10,     /* Time frame to send data periodically */
-};
+#include "enum.h"
 
 /*---------------------------------------------------------------------------*/
 PROCESS(node_routing_check_process, "Routing check process for node of the network");
@@ -100,7 +83,6 @@ PROCESS_THREAD(node_routing_send_process, ev, data)
     etimer_set(&broad_delay, CLOCK_SECOND * SEND_ROUTING); /* Timer for sending routing infos */
 	
 	my_id = rimeaddr_node_addr.u8; /* Get the node address */
-	printf("My address is: %d.%d\n", my_id[0], my_id[1]);
 
   	while(1) {
     	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&broad_delay));
@@ -140,7 +122,7 @@ PROCESS_THREAD(node_data_process, ev, data)
 				if (change % 2 == 0) {
 					create_data_packet();
 				}
-			}
+			} /* If we get here, the node is mute, don't send */
  	   	}
 		etimer_reset(&et);
   	}
