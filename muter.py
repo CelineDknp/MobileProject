@@ -8,6 +8,9 @@ import os
 class Muter(Thread):
     def __init__(self, serial, server, nb_motes, verbose):
         def init_dico():
+            """
+            Initialize dictionary of subscriptions for each mote and topic
+            """
             mote_dict = {}
             for i in range(2,nb_motes+1):
                 mote_dict[i] = {
@@ -23,15 +26,27 @@ class Muter(Thread):
         self.client = mqtt.Client()
         self.motes = init_dico()
 
-    def handle_data(self, content, sub):
+    def _handle_data(self, content, sub):
         def unmute(mote, topic):
+            """
+            Send an unmute message to the serial
+            """
+            if self.verbose:
+                print("unmuting " + mote + " " + topic)
             self.serial.write("1/{}/{}\n".format(mote,0 if topic == "temperature" else 1).encode())
         
         def mute(mote, topic):
+            """
+            Send a mute message
+            """
+            if self.verbose:
+                print("muting " + mote + " " + topic)
             self.serial.write("2/{}/{}\n".format(mote,0 if topic == "temperature" else 1).encode())
 
-        if sub:
-            if content[0] == "#":
+        if sub: # received a subscription
+            if content[0] == "#": # all motes and topics
+                if self.verbose:
+                    print("Subscription to all motes and topics")
                 for k in self.motes:
                     for l in self.motes[k]:
                         if self.motes[k][l] == 0:
@@ -41,6 +56,8 @@ class Muter(Thread):
                 try:
                     mote_id = int(content[0])
                     if content[1] == "#":
+                        if self.verbose:
+                            print("Subscription to mote " + mote_id + " all its topics")
                         for k in self.motes[mote_id]:
                             if self.motes[mote_id][k] == 0:
                                 unmute(mote_id, k)
@@ -48,6 +65,8 @@ class Muter(Thread):
                     else:
                         try:
                             topic = content[1]
+                            if self.verbose:
+                                print("Subscription to mote " + mote_id + " topic " + topic)
                             if self.motes[mote_id][topic] == 0:
                                 unmute(mote_id, topic)
                             self.motes[mote_id][topic] += 1
@@ -55,8 +74,10 @@ class Muter(Thread):
                             print("incorrect topic")
                 except:
                     print("not correct subscription")
-        else:
+        else: # received unsubscription
             if content[0] == "#":
+                if self.verbose:
+                    print("Subscription to all motes and topics")
                 for k in self.motes:
                     for l in self.motes[k]:
                         self.motes[k][l]-= 1
@@ -67,6 +88,8 @@ class Muter(Thread):
                 try:
                     mote_id = int(content[0])
                     if content[1] == "#":
+                        if self.verbose:
+                            print("Subscription to mote " + mote_id + " all its topics")
                         for k in self.motes[mote_id]:
                             self.motes[mote_id][k] -= 1
                             if self.motes[mote_id][k] <= 0:
@@ -75,6 +98,8 @@ class Muter(Thread):
                     else:
                         try:
                             topic = content[1]
+                            if self.verbose:
+                                print("Subscription to mote " + mote_id + " topic " + topic)
                             self.motes[mote_id][topic] -= 1
                             if self.motes[mote_id][topic] <= 0:
                                 self.motes[mote_id][topic] = 0
@@ -86,21 +111,33 @@ class Muter(Thread):
 
     def run(self):
         def on_connect(client, userdata, flags, rc):
-            print("connected with the result code "+str(rc))
+            """
+            connect callback function
+            """
+            if self.verbose:
+                print("connected with the result code "+str(rc))
+                print("Subscription to $SYS logs")
             client.subscribe("$SYS/broker/log/M/subscribe/#")
             client.subscribe("$SYS/broker/log/M/unsubscribe/#")
 
         def on_message(client, userdata, msg):
+            """
+            message callback function
+            """
             if msg.topic == "$SYS/broker/log/M/subscribe":
+                if self.verbose:
+                    print("Subscription received")
                 sub = str(msg.payload).split(" ")[3]
                 sub = sub[0:len(sub)-1] # rm '
                 content = sub.split("/")
-                self.handle_data(content, True)
+                self._handle_data(content, True)
             elif msg.topic == "$SYS/broker/log/M/unsubscribe":
+                if self.verbose:
+                    print("Unsubscription received")
                 unsub = str(msg.payload).split(" ")[2]
                 unsub = unsub[0:len(unsub)-1]
                 content = unsub.split("/")
-                self.handle_data(content, False)
+                self._handle_data(content, False)
             else:
                 print("unknown subscription")
 
@@ -108,14 +145,20 @@ class Muter(Thread):
         self.client.on_message = on_message
         self.client.connect(self.server)
 
+        if self.verbose:
+            print("Muter connected on server")
+
         while self.flag:
             self.client.loop()
 
     def join(self):
         self.flag = False
+        if self.verbose:
+            print("Muter stopping")
         super(Muter, self).join(1)
 
 if __name__ == "__main__":
+    # Main for testing
     muter = Muter(None, "127.0.0.1", 5, True)
     client = mqtt.Client()
     client.connect("127.0.0.1")
