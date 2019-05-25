@@ -18,7 +18,7 @@ class DataInput(Thread):
         self.client.loop_start() 
         while self.flag: 
             line = self.serial.readline().decode() 
-            data = line.split("-") 
+            data = line.split("/") 
             if len(data) == 3: 
                 sender = data[0].strip() 
                 mesure = data[1].strip() 
