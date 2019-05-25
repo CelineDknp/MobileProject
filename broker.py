@@ -4,6 +4,7 @@ from threading import Thread
 from muter import Muter
 import sys 
 import os 
+import argparse
 
 class DataInput(Thread): 
     def __init__(self, server, serial, verbose): 
@@ -83,17 +84,25 @@ class CmdOutput(Thread):
                             
                             
 if __name__ == '__main__': 
-    if sys.version_info[0] < 3 or len(sys.argv) < 3 or len(sys.argv) > 4: 
-        print("Usage : sudo python3 gateway.py server port [-v]") 
-        exit() 
+    parser = argparse.ArgumentParser(description="Gateway between mosquitto broker and a Rime sensor network")
+    parser.add_argument("server", help="Mosquitto server")
+    parser.add_argument("serial", help="Serial connection with a sensor")
+    parser.add_argument("nb_motes", help="Number of motes")
+    parser.add_argument("--verbose", '-v', help="enables logging", action="store_true")
+    
+    args = parser.parse_args()
 
-    server = sys.argv[1] 
-    serial = serial_dump.Serial(port=sys.argv[2],baudrate=115200) 
-    verbose = True if len(sys.argv) == 4 and sys.argv[3] == "-v" else False 
+    server = args.server
+    serial = serial_dump.Serial(port=args.serial,baudrate=115200) 
+    nb_motes = args.nb_motes
+    verbose = args.verbose
     dataThread = DataInput(server, serial, verbose) 
     cmdThread = CmdOutput(serial, verbose) 
+    muterThread = Muter(serial, server, nb_motes, verbose)
     dataThread.start() 
     cmdThread.start() 
+    muterThread.start()
     cmdThread.join() 
     dataThread.join() 
+    muterThread.join()
     serial.close()

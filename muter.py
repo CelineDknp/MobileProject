@@ -5,8 +5,6 @@ import sys
 from time import sleep
 import os
 
-l = []
-
 class Muter(Thread):
     def __init__(self, serial, server, nb_motes, verbose):
         def init_dico():
