@@ -45,14 +45,83 @@ class DataInput(Thread):
         super(DataInput, self).join(1) 
 
 class Muter(Thread):
-    def __init__(self, serial, server, verbose):
+    def __init__(self, serial, server, nb_motes, verbose):
+        def init_dico():
+            mote_dict = {}
+            for i in range(2,nb_motes+1):
+                mote_dict[i] = {
+                    "temperature": 0,
+                    "humidity": 0
+                }
+            return mote_dict
         Thread.__init__(self)
         self.serial = serial
         self.verbose = verbose
         self.flag = True
         self.server = server
         self.client = mqtt.Client()
-        #TODO dico for nodes
+        self.motes = init_dico()
+
+    def handle_data(self, content, sub):
+        def unmute(mote, topic):
+            self.serial.write("1/{}/{}\n".format(mote,0 if topic == "temperature" else 1).encode())
+        
+        def mute(mote, topic):
+            self.serial.write("2/{}/{}\n".format(mote,0 if topic == "temperature" else 1).encode())
+
+        if sub:
+            if content[0] == "#":
+                for k in self.motes:
+                    for l in self.motes[k]:
+                        if self.motes[k][l] == 0:
+                            unmute(k,l)
+                        self.motes[k][l]+= 1
+            else:
+                try:
+                    mote_id = int(content[0])
+                    if content[1] == "#":
+                        for k in self.motes[mote_id]:
+                            if self.motes[mote_id][k] == 0:
+                                unmute(mote_id, k)
+                            self.motes[mote_id][k] += 1
+                    else:
+                        try:
+                            topic = content[1]
+                            if self.motes[mote_id][topic] == 0:
+                                unmute(mote_id, topic)
+                            self.motes[mote_id][topic] += 1
+                        except:
+                            print("incorrect topic")
+                except:
+                    print("not correct subscription")
+        else:
+            if content[0] == "#":
+                for k in self.motes:
+                    for l in self.motes[k]:
+                        self.motes[k][l]-= 1
+                        if self.motes[k][l] <= 0:
+                            self.motes[k][l] = 0
+                            mute(k,l)
+            else:
+                try:
+                    mote_id = int(content[0])
+                    if content[1] == "#":
+                        for k in self.motes[mote_id]:
+                            self.motes[mote_id][k] -= 1
+                            if self.motes[mote_id][k] <= 0:
+                                self.motes[mote_id][k] = 0
+                                mute(mote_id, k)
+                    else:
+                        try:
+                            topic = content[1]
+                            self.motes[mote_id][topic] -= 1
+                            if self.motes[mote_id][topic] <= 0:
+                                self.motes[mote_id][topic] = 0
+                                mute(mote_id, topic)
+                        except:
+                            print("incorrect topic")
+                except:
+                    print("not correct subscription")
 
     def run(self):
         def on_connect(client, userdata, flags, rc):
@@ -64,11 +133,13 @@ class Muter(Thread):
             if msg.topic == "$SYS/broker/log/M/subscribe":
                 sub = str(msg.payload).split(" ")[3]
                 sub = sub[0:len(sub)-1] # rm '
-                print(sub)
+                content = sub.split("/")
+                self.handle_data(content, True)
             elif msg.topic == "$SYS/broker/log/M/unsubscribe":
                 unsub = str(msg.payload).split(" ")[2]
                 unsub = unsub[0:len(unsub)-1]
-                print(unsub)
+                content = unsub.split("/")
+                self.handle_data(content, False)
             else:
                 print("unknown subscription")
 
@@ -102,11 +173,11 @@ class CmdOutput(Thread):
                     print("Received command :") 
                     print(line) 
                 if line == "noSend": 
-                    self.serial.write("1\n".encode()) 
+                    self.serial.write("0/1\n".encode()) 
                 if line == "periodically": 
-                    self.serial.write("2\n".encode()) 
+                    self.serial.write("0/2\n".encode()) 
                 if line == "onChange": 
-                    self.serial.write("3\n".encode()) 
+                    self.serial.write("0/3\n".encode()) 
                 elif line == "stop": 
                     self.flag = False 
                     if self.verbose: 
