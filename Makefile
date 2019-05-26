@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = test root
+CONTIKI_PROJECT = node root
 all: $(CONTIKI_PROJECT)
 
 #UIP_CONF_IPV6=1
