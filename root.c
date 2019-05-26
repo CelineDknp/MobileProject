@@ -34,9 +34,19 @@ PROCESS_THREAD(test_serial, ev, data)
  
    for(;;) {
      PROCESS_YIELD();
-     if(ev == serial_line_event_message) {
-       printf("received line: %s\n", (char *)data);
-     }
+     if (ev == serial_line_event_message && data != NULL) {
+	printf("Input received: %s\n", (char *) data);
+	char i = ((char *) data)[2];
+	printf("char : %c\n", i);
+	if (i == '1') //noSend
+		send_cmd(1, 3);
+	else if (i == '2') //periodically
+		send_cmd(1, 1);
+	else if (i == '3') //onChange
+		send_cmd(1, 2);
+	else
+		printf("[ERROR] Unknown input from gateway\n");
+}
    }
    PROCESS_END();
 }
@@ -63,7 +73,7 @@ PROCESS_THREAD(broadcast_process, ev, data)
 
         packetbuf_copyfrom(&p, sizeof(routing_packet_t));
         broadcast_send(&broadcast);
-        printf("Broadcast message sent\n");
+        //printf("Broadcast message sent\n");
     }
 
     PROCESS_END();	
@@ -74,32 +84,32 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 {
     routing_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet_t));
-    printf("Broadcast message of type %d received from %d.%d at rank %d\n",
+    /*printf("Broadcast message of type %d received from %d.%d at rank %d\n",
         p.message_type,
         from->u8[0], 
         from->u8[1], 
         p.rank);
-    printf("Ignored, I am root\n");
+    printf("Ignored, I am root\n");*/
 }
 
 static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8_t seqnbr)
 {
     data_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(data_packet_t));
-    printf("Unicast message of type %d received from %d.%d saying %d\n",  
+    /*printf("Unicast message of type %d received from %d.%d saying %d\n",  
         p.message_type,
         p.id1_sender, 
         p.id2_sender, 
         p.sensor_data);
-    printf("I am root, I need to give it to the gateway!\n");
+    printf("I am root, I need to give it to the gateway!\n");*/
 }
 
 static void send_cmd(uint8_t type_cmd, uint8_t value)
 {
     uint8_t type = CMD;
-    routing_packet_t p = {type, type_cmd, value}; /* Create routing packet */
+    command_packet_t p = {type, type_cmd, value}; /* Create command packet */
 
     packetbuf_copyfrom(&p, sizeof(command_packet_t));
     broadcast_send(&broadcast);
-    printf("Broadcast command message sent\n"); /* Send routing infos */
+    printf("Command command message sent\n"); /* Send routing infos */
 }

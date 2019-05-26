@@ -58,7 +58,7 @@ PROCESS_THREAD(node_routing_check_process, ev, data)
             /* Timer expired and the node had a parent */
             etimer_reset(&parent_timer);
             rank = 0;
-            printf("I lost my parent!\n");
+            //printf("I lost my parent!\n");
         }
     }
 
@@ -131,7 +131,7 @@ static void send_routing_infos()
 
     packetbuf_copyfrom(&p, sizeof(routing_packet_t));
     broadcast_send(&broadcast);
-    printf("Broadcast routing message sent\n"); /* Send routing infos */
+    //printf("Broadcast routing message sent\n"); /* Send routing infos */
 }
 
 static void create_data_packet() 
@@ -139,7 +139,7 @@ static void create_data_packet()
     uint8_t type_packet = DATA;
     uint8_t type_data = (rand() % NBR_SUBJECTS) + 2; /* Randomly pick the data type */
     uint16_t value = rand(); /* Randomly create a value */
-    printf("Decided on subject %d\n", type_data);
+    //printf("Decided on subject %d\n", type_data);
 
     data_packet_t p = {type_packet, type_data, my_id[0], my_id[1], value};
     packetbuf_copyfrom(&p, sizeof(data_packet_t));
@@ -147,7 +147,7 @@ static void create_data_packet()
     if (send_permissions[type_data-1] == 1) { 
         /* Send only if allowed */
         runicast_send(&runicast, &parent_addr, 0);
-        printf("Unicast message send\n");
+        //printf("Unicast message send\n");
     } else {
         printf("Did not send unicast message, subject was muted\n");
     }
@@ -158,12 +158,12 @@ static void process_routing(struct broadcast_conn *c, const linkaddr_t *from)
     routing_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet_t));
     
-    printf("Broadcast message of type %d received from %d.%d at rank %d\n",  
+    /*printf("Broadcast message of type %d received from %d.%d at rank %d\n",  
         p.message_type,
         from->u8[0], 
         from->u8[1], 
         p.rank);
-    printf("My rank is %d\n", rank);
+    printf("My rank is %d\n", rank);*/
         
     if (rank == 0 || p.rank + 1 < rank) { 
         /* A parent has to be found */
@@ -191,18 +191,38 @@ static void process_cmd(struct broadcast_conn *c, const linkaddr_t *from)
     command_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(command_packet_t));
 
-    printf("Broadcast command message received from %d.%d type : %d, value : %d\n",  
-        p.message_type,
+    printf("Broadcast command message received from %d.%d type : %d, value : %d\n",
+        from->u8[0], 
+        from->u8[1],
         p.command_type, 
         p.command_value);
-    
-    switch(p.command_type) {
+    int changed = 0;
+    switch(p.command_type) { //Process command
         case SENDING:
-            sending_mode = p.command_value;
+	    if(sending_mode != p.command_value){
+            	sending_mode = p.command_value;
+	    	printf("Sending mode changed to %d\n", sending_mode);
+		changed = 1;
+	    }
+	    break;
         case MUTE_SUBJECT:
-            send_permissions[p.command_value - 1] = 0;
+	    if(send_permissions[p.command_value - 1] != 0){
+            	send_permissions[p.command_value - 1] = 0;
+	    	printf("Muted subject %d\n", p.command_value);
+		changed = 1;
+	    }
+	    break;
         case UNMUTE_SUBJECT:
-            send_permissions[p.command_value - 1] = 1;
+            if(send_permissions[p.command_value - 1] != 1){
+            	send_permissions[p.command_value - 1] = 1;
+	    	printf("Unmuted subject %d\n", p.command_value);
+		changed = 1;
+	    }
+	    break;
+    }
+    if(changed == 1){
+    	packetbuf_copyfrom(&p, sizeof(command_packet_t)); //Broadcast command
+    	broadcast_send(&broadcast);
     }
 }
 
@@ -226,17 +246,17 @@ static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8
 {
     data_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(data_packet_t));
-    printf("Unicast message of type %d received from %d.%d saying %d\n",  
+    /*printf("Unicast message of type %d received from %d.%d saying %d\n",  
         p.message_type,
         p.id1_sender, 
         p.id2_sender, 
-        p.sensor_data);
+        p.sensor_data);*/
 
     if (rank != 0) {
         /* The node has a parent */
         packetbuf_copyfrom(&p, sizeof(data_packet_t)); /* Need to pass message along */
         runicast_send(&runicast, &parent_addr, 0);
-        printf("Unicast message passed along\n");
+        //printf("Unicast message passed along\n");
     } else {
         /* The node has no parent */
         printf("ERROR: Got a unicast message but have no parent to give it to\n");

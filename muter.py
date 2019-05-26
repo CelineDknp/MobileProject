@@ -12,7 +12,7 @@ class Muter(Thread):
             Initialize dictionary of subscriptions for each mote and topic
             """
             mote_dict = {}
-            for i in range(2,nb_motes+1):
+            for i in range(2,int(nb_motes)+1):
                 mote_dict[i] = {
                     "temperature": 0,
                     "humidity": 0

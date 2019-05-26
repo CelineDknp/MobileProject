@@ -12,7 +12,7 @@ class DataInput(Thread):
         self.serial = serial 
         self.verbose = verbose 
         self.server = server 
-        self.client = mqtt.Client() 
+        self.client = mqtt.Client()
         self.flag = True 
         
     def run(self): 
