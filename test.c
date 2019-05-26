@@ -196,11 +196,12 @@ static void process_cmd(struct broadcast_conn *c, const linkaddr_t *from)
     command_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(command_packet_t));
     if(verbose == 1)
-    	printf("Broadcast command message received from %d.%d type : %d, value : %d\n",
+    	printf("Broadcast command message received from %d.%d type : %d, value : %d (extra value : %d)\n",
         from->u8[0], 
         from->u8[1],
         p.command_type, 
-        p.command_value);
+        p.command_value,
+	p.command_value_extra);
     int changed = 0;
     switch(p.command_type) { //Process command
         case SENDING:
@@ -212,7 +213,7 @@ static void process_cmd(struct broadcast_conn *c, const linkaddr_t *from)
 	    }
 	    break;
         case MUTE_SUBJECT:
-	    if(send_permissions[p.command_value - 1] != 0){
+	    if(send_permissions[p.command_value - 1] != 0 && p.command_value_extra == my_id[0]){
             	send_permissions[p.command_value - 1] = 0;
 		if(verbose == 1)
 	    		printf("Muted subject %d\n", p.command_value);
@@ -220,7 +221,7 @@ static void process_cmd(struct broadcast_conn *c, const linkaddr_t *from)
 	    }
 	    break;
         case UNMUTE_SUBJECT:
-            if(send_permissions[p.command_value - 1] != 1){
+            if(send_permissions[p.command_value - 1] != 1 && p.command_value_extra == my_id[0]){
             	send_permissions[p.command_value - 1] = 1;
 	    	if(verbose == 1)
 	    		printf("Unmuted subject %d\n", p.command_value);

@@ -22,7 +22,7 @@ uint8_t verbose = 1; /* Activate/deactivate prints when working */
 /* Functions declarations */
 static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from);
 static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8_t seqnbr);
-static void send_cmd(uint8_t type_cmd, uint8_t value);
+static void send_cmd(uint8_t type_cmd, uint8_t value, uint8_t value_extra);
 
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;
@@ -38,15 +38,32 @@ PROCESS_THREAD(test_serial, ev, data)
      if (ev == serial_line_event_message && data != NULL) {
 	if(verbose == 1)
 		printf("Input received: %s\n", (char *) data);
-	char i = ((char *) data)[2];
-	if (i == '1') //noSend
-		send_cmd(1, 3);
-	else if (i == '2') //periodically
-		send_cmd(1, 1);
-	else if (i == '3') //onChange
-		send_cmd(1, 2);
-	else
+	char i = ((char *) data)[0];
+	if(i == '0'){//Sending modes 
+		char i = ((char *) data)[2];
+		if (i == '1') //noSend
+			send_cmd(1, 3, 0);
+		else if (i == '2') //periodically
+			send_cmd(1, 1, 0);
+		else if (i == '3') //onChange
+			send_cmd(1, 2, 0);
+		else
+			printf("[ERROR] Unknown input from gateway\n");
+	}else if(i == '1'){ //Unmute topics
+		char node = ((char *) data)[2];
+		char subject = ((char *) data)[4];
+		int i_node = node - '0';
+		int i_subject = subject - '0';
+		send_cmd(3, i_subject, i_node);
+	}else if(i == '2'){ //Mute topics
+		char node = ((char *) data)[2];
+		char subject = ((char *) data)[4];
+		int i_node = node - '0';
+		int i_subject = subject - '0';
+		send_cmd(2, i_subject, i_node);
+	}else{
 		printf("[ERROR] Unknown input from gateway\n");
+	}
 }
    }
    PROCESS_END();
@@ -122,10 +139,10 @@ static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8
 	}
 }
 
-static void send_cmd(uint8_t type_cmd, uint8_t value)
+static void send_cmd(uint8_t type_cmd, uint8_t value, uint8_t value_extra)
 {
     uint8_t type = CMD;
-    command_packet_t p = {type, type_cmd, value}; /* Create command packet */
+    command_packet_t p = {type, type_cmd, value, value_extra}; /* Create command packet */
 
     packetbuf_copyfrom(&p, sizeof(command_packet_t));
     broadcast_send(&broadcast);
