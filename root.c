@@ -31,42 +31,48 @@ static struct runicast_conn runicast;
 
 PROCESS_THREAD(test_serial, ev, data)
 {
-   PROCESS_BEGIN();
+    PROCESS_BEGIN();
  
-   for(;;) {
-     PROCESS_YIELD();
-     if (ev == serial_line_event_message && data != NULL) {
-	if(verbose == 1)
-		printf("Input received: %s\n", (char *) data);
-	char i = ((char *) data)[0];
-	if(i == '0'){//Sending modes 
-		char i = ((char *) data)[2];
-		if (i == '1') //noSend
-			send_cmd(1, 3, 0);
-		else if (i == '2') //periodically
-			send_cmd(1, 1, 0);
-		else if (i == '3') //onChange
-			send_cmd(1, 2, 0);
-		else
-			printf("[ERROR] Unknown input from gateway\n");
-	}else if(i == '1'){ //Unmute topics
-		char node = ((char *) data)[2];
-		char subject = ((char *) data)[4];
-		int i_node = node - '0';
-		int i_subject = subject - '0';
-		send_cmd(3, i_subject, i_node);
-	}else if(i == '2'){ //Mute topics
-		char node = ((char *) data)[2];
-		char subject = ((char *) data)[4];
-		int i_node = node - '0';
-		int i_subject = subject - '0';
-		send_cmd(2, i_subject, i_node);
-	}else{
-		printf("[ERROR] Unknown input from gateway\n");
-	}
-}
-   }
-   PROCESS_END();
+    while (1) {
+        PROCESS_YIELD();
+
+        if (ev == serial_line_event_message && data != NULL) {
+            if (verbose == 1) {
+                printf("Input received: %s\n", (char *) data);
+            }
+            char i = ((char *) data)[0];
+            
+            if (i == '0') { /* Sending modes */
+                char i = ((char *) data)[2];
+                if (i == '1') /* noSend */
+                    send_cmd(SENDING, MUTE, 0);
+                else if (i == '2') /* periodically */
+                    send_cmd(SENDING, PERIOD, 0);
+                else if (i == '3') /* onChange */
+                    send_cmd(SENDING, CHANGE, 0);
+                else
+                    printf("[ERROR] Unknown input from gateway\n");
+
+            } else if (i == '1') { /* Unmute topics */
+                char node = ((char *) data)[2];
+                char subject = ((char *) data)[4];
+                int i_node = node - '0';
+                int i_subject = subject - '0';
+                send_cmd(UNMUTE_SUBJECT, i_subject, i_node);
+
+            } else if (i == '2') { /* Mute topics */
+                char node = ((char *) data)[2];
+                char subject = ((char *) data)[4];
+                int i_node = node - '0';
+                int i_subject = subject - '0';
+                send_cmd(MUTE_SUBJECT, i_subject, i_node);
+
+            } else {
+                printf("[ERROR] Unknown input from gateway\n");
+            }
+        }
+    }
+    PROCESS_END();
 }
  
 PROCESS_THREAD(broadcast_process, ev, data)
@@ -91,8 +97,10 @@ PROCESS_THREAD(broadcast_process, ev, data)
 
         packetbuf_copyfrom(&p, sizeof(routing_packet_t));
         broadcast_send(&broadcast);
-	if(verbose == 1)
-        	printf("Broadcast message sent\n");
+
+        if (verbose == 1) {
+            printf("Broadcast message sent\n");
+        }
     }
 
     PROCESS_END();	
@@ -103,13 +111,14 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 {
     routing_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet_t));
-    if(verbose == 1){
-    	printf("Broadcast message of type %d received from %d.%d at rank %d\n",
-        p.message_type,
-        from->u8[0], 
-        from->u8[1], 
-        p.rank);
-    	printf("Ignored, I am root\n");
+
+    if (verbose == 1) {
+        printf("Broadcast message of type %d received from %d.%d at rank %d\n",
+            p.message_type,
+            from->u8[0], 
+            from->u8[1], 
+            p.rank);
+        printf("Ignored, I am root\n");
     }
 }
 
@@ -117,26 +126,26 @@ static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8
 {
     data_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(data_packet_t));
-    if(verbose == 1){
-    	printf("Unicast message of type %d received from %d.%d saying %d\n",  
-        p.message_type,
-        p.id1_sender, 
-        p.id2_sender, 
-        p.sensor_data);
+
+    if (verbose == 1) {
+        printf("Unicast message of type %d received from %d.%d saying %d\n",  
+            p.message_type,
+            p.id1_sender, 
+            p.id2_sender, 
+            p.sensor_data);
     }
-	switch (p.data_type) {
-		case TEMP:
-			printf("%d.%d-%s-%d\n", p.id1_sender, p.id2_sender,
-						"temperature", p.sensor_data);
-			break;
-		case HUMIDITY:
-			printf("%d.%d-%s-%d\n", p.id1_sender, p.id2_sender,
-						"humidity", p.sensor_data);
-			break;
-		default:
-			printf("ERROR : Unknown data packet\n");
-			break;
-	}
+
+    switch (p.data_type) {
+        case TEMP:
+            printf("%d.%d-%s-%d\n", p.id1_sender, p.id2_sender, "temperature", p.sensor_data);
+            break;
+        case HUMIDITY:
+            printf("%d.%d-%s-%d\n", p.id1_sender, p.id2_sender, "humidity", p.sensor_data);
+            break;
+        default:
+            printf("[ERROR] Unknown data packet\n");
+            break;
+    }
 }
 
 static void send_cmd(uint8_t type_cmd, uint8_t value, uint8_t value_extra)
@@ -146,6 +155,8 @@ static void send_cmd(uint8_t type_cmd, uint8_t value, uint8_t value_extra)
 
     packetbuf_copyfrom(&p, sizeof(command_packet_t));
     broadcast_send(&broadcast);
-    if(verbose == 1)
-    	printf("Command command message sent\n"); /* Send routing infos */
+
+    if (verbose == 1) {
+        printf("Command command message sent\n"); /* Send routing infos */
+    }
 }
