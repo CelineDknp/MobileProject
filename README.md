@@ -1,5 +1,17 @@
 # MobileProject
 
+Installation:
+
+```bash
+sudo apt-get install mosquitto mosquitto-clients
+```
+
+Python packages:
+
+```bash
+pip3 install paho-mqtt pyserial argparse
+```
+
 for setup mosquitto:
 
 ```bash
