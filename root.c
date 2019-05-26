@@ -17,6 +17,7 @@ AUTOSTART_PROCESSES(&broadcast_process, &test_serial);
 /*---------------------------------------------------------------------------*/
 /* Variables */
 uint8_t rank = 0; /* Root's rank is always 0 and it has no parent */
+uint8_t verbose = 1; /* Activate/deactivate prints when working */
 
 /* Functions declarations */
 static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from);
@@ -35,9 +36,9 @@ PROCESS_THREAD(test_serial, ev, data)
    for(;;) {
      PROCESS_YIELD();
      if (ev == serial_line_event_message && data != NULL) {
-	printf("Input received: %s\n", (char *) data);
+	if(verbose == 1)
+		printf("Input received: %s\n", (char *) data);
 	char i = ((char *) data)[2];
-	printf("char : %c\n", i);
 	if (i == '1') //noSend
 		send_cmd(1, 3);
 	else if (i == '2') //periodically
@@ -73,7 +74,8 @@ PROCESS_THREAD(broadcast_process, ev, data)
 
         packetbuf_copyfrom(&p, sizeof(routing_packet_t));
         broadcast_send(&broadcast);
-        //printf("Broadcast message sent\n");
+	if(verbose == 1)
+        	printf("Broadcast message sent\n");
     }
 
     PROCESS_END();	
@@ -84,24 +86,40 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 {
     routing_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet_t));
-    /*printf("Broadcast message of type %d received from %d.%d at rank %d\n",
+    if(verbose == 1){
+    	printf("Broadcast message of type %d received from %d.%d at rank %d\n",
         p.message_type,
         from->u8[0], 
         from->u8[1], 
         p.rank);
-    printf("Ignored, I am root\n");*/
+    	printf("Ignored, I am root\n");
+    }
 }
 
 static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8_t seqnbr)
 {
     data_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(data_packet_t));
-    /*printf("Unicast message of type %d received from %d.%d saying %d\n",  
+    if(verbose == 1){
+    	printf("Unicast message of type %d received from %d.%d saying %d\n",  
         p.message_type,
         p.id1_sender, 
         p.id2_sender, 
         p.sensor_data);
-    printf("I am root, I need to give it to the gateway!\n");*/
+    }
+	switch (p.data_type) {
+		case TEMP:
+			printf("%d.%d-%s-%d\n", p.id1_sender, p.id2_sender,
+						"temperature", p.sensor_data);
+			break;
+		case HUMIDITY:
+			printf("%d.%d-%s-%d\n", p.id1_sender, p.id2_sender,
+						"humidity", p.sensor_data);
+			break;
+		default:
+			printf("ERROR : Unknown data packet\n");
+			break;
+	}
 }
 
 static void send_cmd(uint8_t type_cmd, uint8_t value)
@@ -111,5 +129,6 @@ static void send_cmd(uint8_t type_cmd, uint8_t value)
 
     packetbuf_copyfrom(&p, sizeof(command_packet_t));
     broadcast_send(&broadcast);
-    printf("Command command message sent\n"); /* Send routing infos */
+    if(verbose == 1)
+    	printf("Command command message sent\n"); /* Send routing infos */
 }
