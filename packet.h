@@ -10,6 +10,7 @@ typedef struct command_packet {
     uint8_t message_type;
     uint8_t command_type;
     uint8_t command_value;
+    uint8_t command_value_extra;
 } command_packet_t;
 
 typedef struct data_packet {
