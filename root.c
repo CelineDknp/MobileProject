@@ -4,6 +4,7 @@
 #include <string.h>
 #include "contiki.h"
 #include "net/rime/rime.h"
+#include "dev/serial-line.h"
 #include "random.h"
 
 #include "packet.h"
@@ -11,9 +12,9 @@
 
 /*---------------------------------------------------------------------------*/   
 PROCESS(broadcast_process, "Process to send routing infos");
-AUTOSTART_PROCESSES(&broadcast_process);
+PROCESS(test_serial, "Serial line test process");
+AUTOSTART_PROCESSES(&broadcast_process, &test_serial);
 /*---------------------------------------------------------------------------*/
-
 /* Variables */
 uint8_t rank = 0; /* Root's rank is always 0 and it has no parent */
 
@@ -26,6 +27,19 @@ static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;
 static const struct runicast_callbacks runicast_call = {runicast_recv};
 static struct runicast_conn runicast;
+
+PROCESS_THREAD(test_serial, ev, data)
+{
+   PROCESS_BEGIN();
+ 
+   for(;;) {
+     PROCESS_YIELD();
+     if(ev == serial_line_event_message) {
+       printf("received line: %s\n", (char *)data);
+     }
+   }
+   PROCESS_END();
+}
  
 PROCESS_THREAD(broadcast_process, ev, data)
 {   
