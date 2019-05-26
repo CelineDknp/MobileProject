@@ -218,6 +218,8 @@ static void process_cmd(struct broadcast_conn *c, const linkaddr_t *from)
 		if(verbose == 1)
 	    		printf("Muted subject %d\n", p.command_value);
 		changed = 1;
+	    }else if(p.command_value_extra != my_id[0] && from->u8[0] == parent_id[0] && from->u8[1] == parent_id[1]){
+		changed = 1;
 	    }
 	    break;
         case UNMUTE_SUBJECT:
@@ -225,6 +227,8 @@ static void process_cmd(struct broadcast_conn *c, const linkaddr_t *from)
             	send_permissions[p.command_value - 1] = 1;
 	    	if(verbose == 1)
 	    		printf("Unmuted subject %d\n", p.command_value);
+		changed = 1;
+	    }else if(p.command_value_extra != my_id[0] && from->u8[0] == parent_id[0] && from->u8[1] == parent_id[1]){
 		changed = 1;
 	    }
 	    break;
