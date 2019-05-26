@@ -25,7 +25,7 @@ class DataInput(Thread):
                 sender = data[0].strip() 
                 mesure = data[1].strip() 
                 value = data[2].strip() 
-                if mesure == "temperature" or mesure == "humidity" or mesure == "light": 
+                if mesure == "temperature" or mesure == "humidity": 
                     topic = "/" + sender + "/" + mesure 
                     self.client.publish(topic, value, qos=2) 
                     if self.verbose: 
@@ -55,16 +55,21 @@ class CmdOutput(Thread):
         self.flag = True 
         
     def run(self): 
+        help_cmd = "Commands available :\n\
+                - help\n\
+                - noSend\n\
+                - periodically\n\
+                - onChange\n\
+                - mute id topic\n\
+                - unmute id topic\n\
+                - stop\
+                "
         if self.verbose: 
             print("Gateway started !") 
-            print("Commands available :") 
-            print("- noSend") 
-            print("- periodically") 
-            print("- onChange") 
-            print("- stop") 
+            print(help_cmd)
         while self.flag: 
             line = input(">> ") 
-            if line == "noSend" or line == "periodically" or line == "onChange": 
+            if line == "noSend" or line == "periodically" or line == "onChange" or line == "help": 
                 if self.verbose: 
                     print("Received command :") 
                     print(line) 
@@ -78,9 +83,18 @@ class CmdOutput(Thread):
                     self.flag = False 
                     if self.verbose: 
                         print("Goodbye!") 
-            elif self.verbose: 
-                print("Received unknown command :") 
-                print(line) 
+                elif line == "help":
+                    print(help_cmd)
+            else:
+                elems = line.split(" ")
+                if (elems[0] == "mute" or elems[0] == "unmute") and len(elems) == 3:
+                    id = int(elems[1])
+                    topic = elems[2]
+                    cmd = 1 if elems[0] == "unmute" else 2
+                    self.serial.write("{}/{}/{}\n".format(cmd, id, topic).encode())
+                elif self.verbose: 
+                    print("Received unknown command :") 
+                    print(line) 
                             
                             
 if __name__ == '__main__': 
