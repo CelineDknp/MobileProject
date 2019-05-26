@@ -3,8 +3,7 @@
 #include <stdio.h> /* For printf() */
 #include <string.h>
 #include "contiki.h"
-#include "net/netstack.h"
-#include "net/rime.h"
+#include "net/rime/rime.h"
 #include "random.h"
 
 #include "packet.h"
@@ -19,8 +18,8 @@ AUTOSTART_PROCESSES(&broadcast_process);
 uint8_t rank = 0; /* Root's rank is always 0 and it has no parent */
 
 /* Functions declarations */
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from);
-static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr);
+static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from);
+static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8_t seqnbr);
 static void send_cmd(uint8_t type_cmd, uint8_t value);
 
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
@@ -57,7 +56,7 @@ PROCESS_THREAD(broadcast_process, ev, data)
 }
 
 /* Functions bodies */
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
+static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 {
     routing_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet_t));
@@ -69,7 +68,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
     printf("Ignored, I am root\n");
 }
 
-static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr)
+static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8_t seqnbr)
 {
     data_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(data_packet_t));

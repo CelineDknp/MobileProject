@@ -3,8 +3,7 @@
 #include <stdio.h> /* For printf() */
 #include <string.h>
 #include "contiki.h"
-#include "net/netstack.h"
-#include "net/rime.h"
+#include "net/rime/rime.h"
 #include "random.h"
 
 #include "packet.h"
@@ -20,7 +19,7 @@ AUTOSTART_PROCESSES(&node_routing_send_process, &node_routing_check_process, &no
 /* Variables */
 uint8_t rank = 0;
 uint8_t parent_id[2];
-rimeaddr_t parent_addr;
+linkaddr_t parent_addr;
 uint8_t *my_id;
 static struct etimer parent_timer;
 
@@ -29,9 +28,9 @@ uint8_t sending_mode = PERIOD;
 int send_permissions[NBR_SUBJECTS] = {1, 1}; /* Start by allowing to send all data type */
 
 /* Functions declarations */
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from);
-static void process_routing(struct broadcast_conn *c, const rimeaddr_t *from);
-static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr);
+static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from);
+static void process_routing(struct broadcast_conn *c, const linkaddr_t *from);
+static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8_t seqnbr);
 static void send_routing_infos();
 static void create_data_packet();
 
@@ -76,7 +75,7 @@ PROCESS_THREAD(node_routing_send_process, ev, data)
     broadcast_open(&broadcast, BROADCAST_CHANNEL, &broadcast_call);
     etimer_set(&broad_delay, CLOCK_SECOND * SEND_ROUTING); /* Timer for sending routing infos */
 
-    my_id = rimeaddr_node_addr.u8; /* Get the node address */
+    my_id = linkaddr_node_addr.u8; /* Get the node address */
 
     while(1) {
         PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&broad_delay));
@@ -154,7 +153,7 @@ static void create_data_packet()
     }
 }
 
-static void process_routing(struct broadcast_conn *c, const rimeaddr_t *from)
+static void process_routing(struct broadcast_conn *c, const linkaddr_t *from)
 {
     routing_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(routing_packet_t));
@@ -172,7 +171,7 @@ static void process_routing(struct broadcast_conn *c, const rimeaddr_t *from)
         rank = p.rank + 1;
         parent_id[0] = from->u8[0];
         parent_id[1] = from->u8[1];
-        memcpy(&parent_addr, from, sizeof(rimeaddr_t));
+        memcpy(&parent_addr, from, sizeof(linkaddr_t));
 
         printf("I found a new parent!\n");
         printf("My rank is now %d\n", rank);
@@ -187,7 +186,7 @@ static void process_routing(struct broadcast_conn *c, const rimeaddr_t *from)
     }
 }
 
-static void process_cmd(struct broadcast_conn *c, const rimeaddr_t *from)
+static void process_cmd(struct broadcast_conn *c, const linkaddr_t *from)
 {
     command_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(command_packet_t));
@@ -207,7 +206,7 @@ static void process_cmd(struct broadcast_conn *c, const rimeaddr_t *from)
     }
 }
 
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
+static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 {
     uint8_t type;
     memcpy(&type, packetbuf_dataptr(), sizeof(uint8_t));
@@ -223,7 +222,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
     
 }
 
-static void runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqnbr)
+static void runicast_recv(struct runicast_conn *c, const linkaddr_t *from, uint8_t seqnbr)
 {
     data_packet_t p;
     memcpy(&p, packetbuf_dataptr(), sizeof(data_packet_t));
